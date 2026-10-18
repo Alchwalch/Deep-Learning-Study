@@ -48,7 +48,7 @@ class MultiHeadAttention(nn.Module):
     self.d_model = d_model
     self.heads = heads
     self.head_dim = d_model // heads
-    self.attn_p = attn_p 
+    self.attn_p = attn_p
 
     self.qkv=nn.Linear(d_model,3*d_model,bias=qkv_bias)
     self.out_fc=nn.Linear(d_model,d_model,bias=qkv_bias)
@@ -143,10 +143,8 @@ class VisionTransformer(nn.Module):
     nn.init.trunc_normal_(self.cls_token, std=0.02)
 
   def _init_weights(self, module):
-    if isinstance(module, nn.Linear):
-      nn.init.trunc_normal_(module.weight, std=0.02)
-      if module.bias is not None:
-        nn.init.zeros_(module.bias)
+    if isinstance(module, VisionTransformer):
+      nn.init.normal_(module.cls_token, mean=0.0, std=0.02)
     elif isinstance(module, nn.Embedding):
       nn.init.trunc_normal_(module.weight, std=0.02)
     elif isinstance(module, nn.LayerNorm):
@@ -165,7 +163,7 @@ class VisionTransformer(nn.Module):
     for block in self.blocks:
       x,score=block(x,return_attn)
       if return_attn:
-        scores.append(score) 
+        scores.append(score)
 
     x=self.norm(x)
     cls_token_final=x[:,0]
