@@ -17,6 +17,8 @@ import itertools
 import regex as re
 import pickle
 
+__all__=['VisionTransformer']
+
 class PatchEmbed(nn.Module):
     def __init__(self,img_size,patch_size,in_channels=3,embed_dim=768):
       super().__init__()
@@ -170,4 +172,4 @@ class VisionTransformer(nn.Module):
     x=self.norm(x)
     cls_token_final=x[:,0]
     logits= self.head(cls_token_final)
-    return (logits,scores) if return_attn else logits
+    return (logits,torch.stack(scores,dim=0)) if return_attn else logits
