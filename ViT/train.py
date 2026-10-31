@@ -16,10 +16,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import itertools
 import regex as re
 import pickle
+import os
 
 __all__=[
   'train_model',
-  'make_loss_graph',
   'load_ckpt',
   'load_best'
 ]
@@ -30,7 +30,6 @@ def save_ckpt(
     path,
     models, optimizers, schedulers,
     epoch, model_idx, batch_offset, running_loss,
-    max_norm=1.0,
     base_seed=67,
     best_losses=None, no_improves=None, es=None,
     train_loss_lists=None, val_loss_lists=None,
@@ -44,7 +43,7 @@ def save_ckpt(
 
   ckpt = {
       'epoch': epoch, 'model_idx': model_idx, 'batch_offset': batch_offset,
-      'running_loss': running_loss, 'max_norm': max_norm, 'base_seed': base_seed,
+      'running_loss': running_loss, 'base_seed': base_seed,
       'models': {n: m.state_dict() for n, m in models.items()},
       'optimizers': {n: o.state_dict() for n, o in optimizers.items()},
       'schedulers': {n: s.state_dict() for n, s in schedulers.items()},
@@ -58,7 +57,7 @@ def save_ckpt(
   missing = [k for k in META_KEYS if k not in ckpt]
   if missing and os.path.exists(p):
     try:
-      old = torch.load(p, map_location=device, weights_only=False)
+      old = torch.load(p, map_location='cpu', weights_only=False)
       for k in missing:
         if k in old:
           ckpt[k] = old[k]
@@ -70,19 +69,20 @@ def save_ckpt(
   torch.save(ckpt, p + '.tmp')
   os.replace(p + '.tmp', p)
 
-def load_ckpt(path,models,optimizers,schedulers,device='cpu'):
+def load_ckpt(path,models,optimizers,schedulers,
+              base_seed=67, device='cpu'):
 
   if path is None:
-    print(f"{path}에 대한 경로 없음.")
-    return
+    print("경로 없음. 처음부터 시작")
+    return 0, 0, 0, 0.0, base_seed, None, None, None, None, None
 
-  p=os.path.join(path,'ckpt.pt')
+  p = os.path.join(path, 'ckpt.pt')
 
   if not os.path.exists(p):
     print("체크포인트 없음, 처음부터 시작")
-    return
+    return 0, 0, 0, 0.0, base_seed, None, None, None, None, None
 
-  ckpt=torch.load(p,map_location=device)
+  ckpt=torch.load(p,map_location=device,weights_only=False)
 
   for name in models.keys():
     models[name].load_state_dict(ckpt['models'][name])
@@ -93,7 +93,6 @@ def load_ckpt(path,models,optimizers,schedulers,device='cpu'):
   resume_model_idx=ckpt['model_idx']
   batch_offset=ckpt['batch_offset']
   running_loss=ckpt['running_loss']
-  max_norm=ckpt['max_norm']
   base_seed=ckpt['base_seed']
 
   if 'best_losses' in ckpt:
@@ -102,20 +101,16 @@ def load_ckpt(path,models,optimizers,schedulers,device='cpu'):
     es=ckpt['es']
 
   else:
-    best_losses=defaultdict(lambda: math.inf)
-    no_improves=defaultdict(lambda: 0)
-    es=set()
+    best_losses, no_improves, es = None, None, None
 
   if 'train_loss_lists' in ckpt:
     train_loss_lists=ckpt['train_loss_lists']
     val_loss_lists=ckpt['val_loss_lists']
 
   else:
-    train_loss_lists=defaultdict(list)
-    val_loss_lists=defaultdict(list)
+    train_loss_lists, val_loss_lists = None, None
 
-  return resume_epoch,resume_model_idx,batch_offset,running_loss,max_norm,base_seed,best_losses,no_improves,es,train_loss_lists,val_loss_lists
-  
+  return resume_epoch,resume_model_idx,batch_offset,running_loss,base_seed,best_losses,no_improves,es,train_loss_lists,val_loss_lists
 
 def save_best(path,name,model):
 
@@ -131,7 +126,7 @@ def save_best(path,name,model):
   os.replace(p + '.tmp', p)
 
 def load_best(path,name,model,device):
-  
+
   if path is None:
     print(f"{path}에 대한 경로 없음.")
     return
@@ -182,7 +177,7 @@ def train_model(
     models, optimizers, schedulers, criterion,
     train_loader, val_loader,
     epochs, eval_interval,
-    best_losses, no_improves=5, es=None, es_patience=5,
+    best_losses=None, no_improves=None, es=None, es_patience=5,
     max_norm=1.0,
     resume_epoch=0, resume_model_idx=0, batch_offset=0, running_loss=0.0,
     train_loss_lists=None, val_loss_lists=None,
@@ -199,6 +194,11 @@ def train_model(
     train_loss_lists = {n: [] for n in models}
   if val_loss_lists is None:
     val_loss_lists = {n: [] for n in models}
+
+  if best_losses is None:
+    best_losses = {n: torch.inf for n in models}
+  if no_improves is None:
+    no_improves = {n: 0 for n in models}
 
   model_names = list(models.keys())
   steps_per_epoch = len(train_loader)
@@ -232,7 +232,7 @@ def train_model(
 
         if max_norm> 0.0:
           nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)
-        
+
         optimizer.step()
 
         train_loss+=loss.item()
@@ -243,7 +243,6 @@ def train_model(
                     model_idx=idx,
                     batch_offset=step+1,
                     running_loss=train_loss,
-                    max_norm=max_norm,
                     base_seed=base_seed,
                     device=device)
 
@@ -265,7 +264,7 @@ def train_model(
 
       next_idx, next_epoch = (idx + 1, epoch) if idx + 1 < len(model_names) else (0, epoch + 1)
       save_ckpt(ckpt_path, models, optimizers, schedulers,
-                next_epoch, next_idx, 0, 0.0,max_norm, base_seed,
+                next_epoch, next_idx, 0, 0.0, base_seed,
                 best_losses,no_improves,list(es),
                 train_loss_lists,val_loss_lists,device=device)
 
@@ -274,6 +273,3 @@ def train_model(
 
     if len(es)==len(models):
       break
-
-def make_loss_graph():
-  pass

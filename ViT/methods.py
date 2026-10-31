@@ -19,7 +19,9 @@ import pickle
 
 __all__ =[
     'compute_mean_attention_dist',
-    'plot_attention_distance'
+    'plot_attention_distance',
+    'plot_attention_map',
+    'plot_loss_lists'
 ]
 
 def init_t_xy(end_x: int, end_y: int):
@@ -50,7 +52,7 @@ def compute_mean_attention_dist(scores, patch_size=1):
   dist = dist[None, None, None]                       # (1, 1, 1, N, N)
 
   mean_dist = (scores * dist).sum(dim=-1)             # (n_layers, B, heads, N)
-  return mean_dist.mean(dim=-1).mean(dim=1)           # (n_layers, heads)  
+  return mean_dist.mean(dim=-1).mean(dim=1)           # (n_layers, heads)
 
 def plot_attention_distance(
     dist,
@@ -170,3 +172,27 @@ def plot_attention_map(images, targets, scores, logits,
 
   plt.tight_layout()
   return fig
+
+def plot_loss_lists(train_loss_lists, val_loss_lists, names=None, ax=None, title="Loss_list"):
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+    if names is None:
+        names = list(val_loss_lists.keys())
+
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    for i, name in enumerate(names):
+        color = colors[i % len(colors)]
+
+        if name in train_loss_lists:
+            ax.plot(train_loss_lists[name], color=color, linestyle='--')
+        ax.plot(val_loss_lists[name], label=name, color=color, linestyle='-')
+
+    ax.set_title(title)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.legend()
+
+    return ax
