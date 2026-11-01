@@ -3,12 +3,14 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Subset
 
+__all__=[
+    'prepare_cifar10',
+    'CIFAR10_MEAN',
+    'CIFAR10_STD'
+]
+
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_STD  = (0.2470, 0.2435, 0.2616)
-
-__all__=[
-    'prepare_cifar10'
-]
 
 
 def get_transforms(mean=CIFAR10_MEAN, std=CIFAR10_STD, img_size=32, crop_padding=4):
