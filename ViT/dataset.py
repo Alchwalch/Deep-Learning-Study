@@ -10,10 +10,6 @@ __all__=[
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_STD  = (0.2470, 0.2435, 0.2616)
 
-__all__=[
-    'prepare_cifar10'
-]
-
 def get_transforms(mean=CIFAR10_MEAN, std=CIFAR10_STD, img_size=32, crop_padding=4):
     train_tf = transforms.Compose([
         transforms.RandomCrop(img_size, padding=crop_padding),
