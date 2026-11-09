@@ -5,8 +5,6 @@ from torch.utils.data import DataLoader, Subset
 
 __all__=[
     'prepare_cifar10',
-    'CIFAR10_MEAN',
-    'CIFAR10_STD'
 ]
 
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)

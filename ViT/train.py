@@ -19,6 +19,8 @@ import pickle
 import os
 
 __all__=[
+  'load_best',
+  'load_ckpt',
   'train_model'
 ]
 
