@@ -16,41 +16,9 @@ import itertools
 import pickle
 
 __all__=[
-    'plot_loss_lists'
+    'plot_loss_lists',
+    'get_accuracy'
 ]
-
-def calc_loss_batch(input_batch,target_batch,model,criterion,device):
-  #label_smoothing ??
-  input_batch,target_batch = input_batch.to(device),target_batch.to(device)
-  logits=model(input_batch)
-  loss=criterion(logits,target_batch)
-  return loss
-
-def calc_loss_loader(data_loader,model,criterion,device,num_batches=None):
-  total_loss=0.0
-  if len(data_loader) == 0:
-    print("Warning: Empty data loader")
-    raise ValueError #return float("nan")
-  elif num_batches is None:
-    num_batches=len(data_loader)
-  else:
-    num_batches=min(num_batches,len(data_loader))
-
-  for i,(src,trg) in enumerate(data_loader):
-    if i >= num_batches:
-      break
-
-    loss=calc_loss_batch(src,trg,model,criterion,device)
-    total_loss+=loss.item()
-
-  return total_loss/num_batches
-
-def evaluate_model(model,data_loader,criterion,device,eval_iter=None):
-  model.eval()
-  with torch.no_grad():
-    loss=calc_loss_loader(data_loader,model,criterion,device,eval_iter)
-  model.train()
-  return loss
 
 @torch.no_grad()
 def get_accuracy(loader, model, device='cpu'):
