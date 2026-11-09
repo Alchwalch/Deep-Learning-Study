@@ -14,7 +14,6 @@ from torch.utils.data import Dataset,Subset,DataLoader,random_split
 from tqdm.notebook import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import itertools
-import regex as re
 import pickle
 
 __all__=['VisionTransformer']

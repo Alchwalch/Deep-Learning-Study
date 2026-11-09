@@ -19,9 +19,7 @@ import pickle
 import os
 
 __all__=[
-  'train_model',
-  'load_ckpt',
-  'load_best'
+  'train_model'
 ]
 
 META_KEYS = ('best_losses', 'no_improves', 'es', 'train_loss_lists', 'val_loss_lists')
